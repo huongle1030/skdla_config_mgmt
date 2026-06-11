@@ -1,0 +1,6 @@
+# Local-only secrets — never commit. Holds the Supabase URL + anon key.
+config.local.js
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
