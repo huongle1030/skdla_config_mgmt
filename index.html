@@ -1632,7 +1632,7 @@ a.tr-sop-pill:hover,a.sop-link-pill:hover{
 
 
 const LIBS=['Industry Standards','Regulatory','Internal Specs','Vendor Docs','Quality Standards'];
-const specs=[
+let specs=[
   {id:'ISO-9001:2015',title:'Quality Management Systems Requirements',body:'ISO',rev:'2015',desc:'Requirements for a quality management system.',libs:['Quality Standards','Industry Standards']},
   {id:'OSHA-1910.119',title:'Process Safety Management of Highly Hazardous Chemicals',body:'OSHA',rev:'2019',desc:'PSM standard for hazardous chemical processes.',libs:['Regulatory','Industry Standards']},
   {id:'OSHA-1910.178',title:'Powered Industrial Trucks',body:'OSHA',rev:'2018',desc:'Safety regulations for forklift operations.',libs:['Regulatory']},
@@ -1667,7 +1667,7 @@ let sops=[
   {id:'SOP-009',title:'Personal Protective Equipment',desc:'PPE requirements by work zone and task type.',ver:'1.6.0',status:'Active',tags:['Safety'],owner:'Plant Safety',updated:'2026-03-22',specs:['ISO-45001:2018'],media:[]},
   {id:'SOP-010',title:'Fire Safety & Evacuation',desc:'Evacuation routes, muster points, fire suppression protocols.',ver:'2.2.0',status:'Under Review',tags:['Safety'],owner:'Plant Safety',updated:'2026-06-01',specs:['NFPA-10','OSHA-1910.119'],media:[]},
 ];
-const drawings=[
+let drawings=[
   {id:'DWG-M001',title:'Assembly Line A — General Arrangement',desc:'Overall layout of Assembly Line A machinery footprint.',ver:'B',status:'Active',tags:['Mechanical','Layout'],owner:'Mech. Eng.',updated:'2026-04-10',specs:[]},
   {id:'DWG-M002',title:'Conveyor Drive Assembly Detail',desc:'Detail drawing for conveyor gearbox and drive shaft.',ver:'C',status:'Active',tags:['Mechanical'],owner:'Mech. Eng.',updated:'2026-03-18',specs:['ASME-B31.3']},
   {id:'DWG-E001',title:'Motor Control Center — MCC-2',desc:'Electrical schematic for MCC-2 serving production floor.',ver:'A',status:'Under Review',tags:['Electrical'],owner:'Electrical Eng.',updated:'2026-06-01',specs:['VND-ABB-MCC']},
@@ -1719,7 +1719,7 @@ const versionData={
     'DWG-M002':[{ver:'C',desc:'Updated bearing specification.',who:'R. Huang',date:'2026-03-18',cur:true},{ver:'B',desc:'Added lubrication points detail.',who:'R. Huang',date:'2025-12-05'}],
   }
 };
-const roles=[
+let roles=[
   {i:'JM',n:'Jamie Mercer',d:'Plant Safety',r:'Admin',bg:'#D9EDF7',tc:'#31708F'},
   {i:'MR',n:'Maria Reyes',d:'Environmental Eng.',r:'Approver',bg:'#FCF8E3',tc:'#8A6D3B'},
   {i:'CW',n:'Chen Wei',d:'QA Team',r:'Author',bg:'#DFF0D8',tc:'#3C763D'},
@@ -3555,17 +3555,19 @@ async function loadAllFromDB(){
       _sb.from('workflows').select('*').order('name'),
     ]);
 
-    // Only replace in-memory arrays if DB has records
-    if(sopRes.data && sopRes.data.length)    sops              = sopRes.data.map(dbToSop);
-    if(dwgRes.data && dwgRes.data.length)    drawings          = dwgRes.data.map(dbToDwg);
-    if(wiRes.data && wiRes.data.length)      workInstructions  = wiRes.data.map(dbToWI);
-    if(specRes.data && specRes.data.length)  specs             = specRes.data.map(dbToSpec);
-    if(tmplRes.data && tmplRes.data.length)  templates         = tmplRes.data.map(dbToTmpl);
-    if(qaRes.data && qaRes.data.length)      qualityAlerts     = qaRes.data.map(dbToQA);
-    if(saRes.data && saRes.data.length)      safetyAlerts      = saRes.data.map(dbToSA);
-    if(pkgRes.data && pkgRes.data.length)    trainingPackages  = pkgRes.data.map(dbToPkg);
-    if(roleRes.data && roleRes.data.length)  roles             = roleRes.data.map(dbToRole);
-    if(wfRes.data && wfRes.data.length)      workflows         = wfRes.data.map(dbToWF);
+    // Mirror the DB exactly: assign whenever the query SUCCEEDED (data is an
+    // array, even if empty). Only on an actual error (data === null) do we keep
+    // the seed data as a fallback — so a transient failure won't blank the app.
+    if(sopRes.data)   sops              = sopRes.data.map(dbToSop);
+    if(dwgRes.data)   drawings          = dwgRes.data.map(dbToDwg);
+    if(wiRes.data)    workInstructions  = wiRes.data.map(dbToWI);
+    if(specRes.data)  specs             = specRes.data.map(dbToSpec);
+    if(tmplRes.data)  templates         = tmplRes.data.map(dbToTmpl);
+    if(qaRes.data)    qualityAlerts     = qaRes.data.map(dbToQA);
+    if(saRes.data)    safetyAlerts      = saRes.data.map(dbToSA);
+    if(pkgRes.data)   trainingPackages  = pkgRes.data.map(dbToPkg);
+    if(roleRes.data)  roles             = roleRes.data.map(dbToRole);
+    if(wfRes.data)    workflows         = wfRes.data.map(dbToWF);
 
     hideLoading();
     renderSOPs();
@@ -3574,7 +3576,10 @@ async function loadAllFromDB(){
     console.log('DB load complete — SOPs:', sops.length, 'Drawings:', drawings.length);
   }catch(e){
     console.error('loadAllFromDB failed:', e);
-    renderSOPs(); // fall back to seed data
+    const ctx = document.getElementById('ctx-title');
+    if(ctx) ctx.textContent = 'Standard Operating Procedure Library';
+    renderSOPs();              // fall back to seed data
+    try{ refreshApprovalCounts(); }catch(_){}
   }
 }
 
